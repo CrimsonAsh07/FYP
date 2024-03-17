@@ -15,7 +15,7 @@ def record_webcam(output_folder, duration):
     # Initialize variables
     existing_files_count = len(os.listdir(output_folder))
 
-    capture_count = existing_files_count
+    capture_count = existing_files_count+1
     start_time = time.time()
     
     while True:
@@ -27,13 +27,13 @@ def record_webcam(output_folder, duration):
             # Save one frame per second
             if time.time() - start_time > 1:
 
-                capture_count += 1
-
                 filename = os.path.join(output_folder, f"{capture_count}.jpg")
                 cv2.imwrite(filename, frame)
                 
                 # Reset timer
                 start_time = time.time()
+
+                capture_count += 1
                 
             # Display webcam feed
             cv2.imshow('Webcam', frame)

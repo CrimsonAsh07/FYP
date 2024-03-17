@@ -28,7 +28,6 @@ def lowlight(image_path, threshold=100):
 
     data_lowlight = Image.open(image_path)
     
-
     if is_dark(image_path):
 
         data_lowlight = (np.asarray(data_lowlight) / 255.0)
@@ -68,6 +67,9 @@ def lowlight(image_path, threshold=100):
 
 def enhance_images(input_folder):
     processed_images = set()
+
+    image_files_path = glob.glob(os.path.join(input_folder, '*.jpg'))
+    processed_images.update(image_files_path)
 
     while True:
         image_files_path = glob.glob(os.path.join(input_folder, '*.jpg'))
