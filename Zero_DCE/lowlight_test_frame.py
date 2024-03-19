@@ -50,11 +50,15 @@ def lowlight(frame, threshold=100):
         # torchvision.utils.save_image(enhanced_image, result_path)
 
         # print("Enhanced", os.path.basename(image_path)) 
+        
+        
         numpy_image = enhanced_image.detach().cpu().numpy()
         numpy_image = np.asarray(numpy_image).reshape(3, 480, 640)
-        #print(numpy_image.shape)
-        cv2_image = np.transpose(numpy_image, (1, 2, 0))
-        cv2_image = cv2.cvtColor(cv2_image, cv2.COLOR_BGR2RGB)  
+                    # print(numpy_image.shape)
+        numpy_image = np.transpose(numpy_image, (1, 2, 0))
+        cv2_image = cv2.cvtColor(numpy_image, cv2.COLOR_BGR2RGB)  
+        
+        
         return cv2_image
     else:
         print("Skipped as it is bright!")
