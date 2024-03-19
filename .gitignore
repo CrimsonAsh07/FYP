@@ -1,2 +1,5 @@
 captured_frames/
 enhanced_frames/
+.venv
+.vscode
+__pycache__
