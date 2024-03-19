@@ -40,7 +40,7 @@ def main():
 
             # Use dynamic wait time based on processing
             wait_time = max(0, ideal_wait_time - processing_time)
-            if cv2.waitKey(ideal_wait_time) & 0xFF == ord("q"):
+            if cv2.waitKey(int(ideal_wait_time)) & 0xFF == ord("q"):
                 break
 
             # Add processed file to the list
