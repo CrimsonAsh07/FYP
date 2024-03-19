@@ -87,5 +87,3 @@ if __name__ == '__main__':
     input_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'captured_frames'))
     
     enhance_images(input_path)
-
-

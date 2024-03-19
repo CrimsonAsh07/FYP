@@ -13,7 +13,7 @@ processed_files = []
 
 
 def main():
-    ideal_wait_time = 1000 / 24  # milliseconds (1 second / 24 FPS)
+    ideal_wait_time = 1000 / 10  # milliseconds (1 second / 24 FPS)
 
     while True:
         image_files = [f for f in os.listdir(images_dir) if f.endswith(('.jpg', '.jpeg', '.png'))]
@@ -40,7 +40,7 @@ def main():
 
             # Use dynamic wait time based on processing
             wait_time = max(0, ideal_wait_time - processing_time)
-            if cv2.waitKey(100) & 0xFF == ord("q"):
+            if cv2.waitKey(ideal_wait_time) & 0xFF == ord("q"):
                 break
 
             # Add processed file to the list
