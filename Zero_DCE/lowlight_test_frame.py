@@ -1,32 +1,31 @@
-import shutil
+
 import cv2
 import torch
 import os
-import sys
 import time
 from PIL import Image
 import glob
 import numpy as np
 from Zero_DCE import model
 from torchvision import transforms
-import torchvision
 
-def is_dark(image, threshold):
+
+def is_dark(image, threshold, verbose):
 
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     
     average_brightness = cv2.mean(gray_image)[0]
-
-    print("Average Intensity", average_brightness)  
+    if verbose: 
+        print("Average Intensity", average_brightness)  
 
     return average_brightness < threshold
 
-def lowlight(frame, threshold=100):
+def lowlight(frame, threshold=100, verbose = True):
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     data_lowlight = Image.fromarray(rgb_frame)
     
-    if is_dark(frame, threshold):
+    if is_dark(frame, threshold, verbose):
 
         data_lowlight = (np.asarray(data_lowlight) / 255.0)
         data_lowlight = torch.from_numpy(data_lowlight).float()
@@ -40,7 +39,8 @@ def lowlight(frame, threshold=100):
         _, enhanced_image, _ = DCE_net(data_lowlight)
 
         end_time = (time.time() - start)
-        print("Processing Time:", end_time)
+        if verbose:  
+            print("Processing Time:", end_time)
 
         # result_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'enhanced_frames'))
         # if not os.path.exists(result_dir):
@@ -57,11 +57,13 @@ def lowlight(frame, threshold=100):
                     # print(numpy_image.shape)
         numpy_image = np.transpose(numpy_image, (1, 2, 0))
         cv2_image = cv2.cvtColor(numpy_image, cv2.COLOR_BGR2RGB)  
-        
+        cv2_image = cv2_image * 255
+        cv2_image = cv2_image.astype(np.uint8)
         
         return cv2_image
     else:
-        print("Skipped as it is bright!")
+        if verbose: 
+            print ("Skipped as it is bright!")
         return frame
 
 
