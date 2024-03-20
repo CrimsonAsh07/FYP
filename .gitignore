@@ -3,3 +3,4 @@ enhanced_frames/
 .venv
 .vscode
 __pycache__
+*.pt
