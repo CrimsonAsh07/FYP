@@ -10,12 +10,11 @@ modely = YOLO('yolov8n.pt', verbose=False)
 
 directions = ["none","left", "down", "right", "up"]
 
-def predict_direction(bbox, screen_dim):
+def predict_direction(id,bbox, screen_dim):
     out_percent = 10/100
     if len(bbox) < 1:
         return 0
-    bbox = bbox[0]
-    #print("Len",bbox,screen_dim)
+    #print("Len",id,bbox,screen_dim)
     if bbox[0] == 0 and bbox[2] < out_percent*screen_dim[1]:
         return 1   
     if bbox[1] == 0 and bbox[3] < out_percent*screen_dim[0]:
@@ -54,10 +53,11 @@ def analyze_footage(video_path, output_folder, duration=None):
             bbox = results[0].boxes
 
             annotated_frame = results[0].plot()
-            bbox = results[0].boxes
-            dir = predict_direction(bbox.xyxy.cpu().numpy(), bbox.orig_shape)
-            if(dir != 0): 
-                print(directions[dir])
+            bboxs = results[0].boxes
+            for bbox in bboxs:
+                dir = predict_direction(bbox.id,bbox.xyxy.cpu().numpy()[0], bbox.orig_shape)
+                if(dir != 0): 
+                    print(bbox.id,directions[dir])
             cv2.imshow("YOLOv8 Tracking", annotated_frame)
             cv2.namedWindow("YOLOv8 Tracking", cv2.WINDOW_NORMAL)
             cv2.resizeWindow("YOLOv8 Tracking", 1024,1024)  
