@@ -5,6 +5,7 @@ import requests
 import numpy as np
 from Zero_DCE import lowlight_test_frame
 from ultralytics import YOLO
+import threading
 
 modely = YOLO('yolov8n.pt')
 
@@ -32,14 +33,14 @@ def get_frame_from_url(url):
     frame = cv2.imdecode(img_arr, -1)
     return frame
 
-def analyze_footage(record_output, output_folder, duration, url):
+def process_video_stream(url, window_name):
     if record_output and not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
     capture_count = 1
     start_time = time.time()
     count = 0
-
+    
     while True:
         frame = get_frame_from_url(url)
 
@@ -51,14 +52,14 @@ def analyze_footage(record_output, output_folder, duration, url):
 
                 start_time = time.time()
                 capture_count += 1
-
+                
             enhanced_frame = lowlight_test_frame.lowlight(frame, threshold=50, verbose=False)
             results = modely.track(enhanced_frame, persist=True, verbose=False, classes=[0])
             annotated_frame = results[0].plot()
 
             resized_frame = cv2.resize(annotated_frame, (960, 540))
-            cv2.imshow(str(url), resized_frame)
-            
+            cv2.imshow(window_name, resized_frame)
+
             count += 1
             bboxs = results[0].boxes
             for bbox in bboxs:
@@ -68,7 +69,7 @@ def analyze_footage(record_output, output_folder, duration, url):
 
         if duration is not None and time.time() - start_time > duration:
             break
-
+        
         if cv2.waitKey(1) & 0xFF == 27:
             break
 
@@ -80,7 +81,15 @@ if __name__ == "__main__":
     duration = None
     
     camA = "http://192.168.29.24:8080/shot.jpg"
-    camB = "http://192.168.29.24:8080/shot.jpg"  
+    camB = "http://192.168.29.217:8080/shot.jpg"
 
-    analyze_footage(record_output, output_folder, duration, camA)
+    thread1 = threading.Thread(target=process_video_stream, args=(camA, "Camera A"))
+    thread2 = threading.Thread(target=process_video_stream, args=(camB, "Camera B"))
+
+    thread1.start()
+    thread2.start()
+
+    thread1.join()
+    thread2.join()
+
 
