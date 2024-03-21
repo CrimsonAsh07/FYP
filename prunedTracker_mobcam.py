@@ -1,4 +1,3 @@
-# Import essential libraries
 import cv2
 import os
 import time
