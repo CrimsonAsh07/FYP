@@ -53,7 +53,7 @@ def lowlight(frame, threshold=100, verbose = True):
         
         
         numpy_image = enhanced_image.detach().cpu().numpy()
-        numpy_image = np.asarray(numpy_image).reshape(3, 480, 640)
+        numpy_image = np.asarray(numpy_image).reshape(numpy_image.shape[1:])
                     # print(numpy_image.shape)
         numpy_image = np.transpose(numpy_image, (1, 2, 0))
         cv2_image = cv2.cvtColor(numpy_image, cv2.COLOR_BGR2RGB)  
