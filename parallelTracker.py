@@ -6,12 +6,16 @@ import numpy as np
 import requests
 from Zero_DCE import lowlight_test_frame
 from ultralytics import YOLO
+from queue import Queue 
 
 
 directions = ["none","left", "down", "right", "up"]
 INPUT_MOB = 0
 INPUT_WEBCAM = 1
 INPUT_FILE = 2
+
+
+
 
 
 def predict_direction(id,bbox, screen_dim):
@@ -37,7 +41,7 @@ def get_frame_from_url(url):
     ret = frame is not None
     return ret, frame
 
-def analyze_footage(inputType, inputPath,model,record_output,output_folder, duration, id):
+def analyze_footage(inputType, inputPath,model,record_output,output_folder, duration,q, id):
     if record_output and not os.path.exists(output_folder):
         os.makedirs(output_folder)
     
@@ -59,7 +63,9 @@ def analyze_footage(inputType, inputPath,model,record_output,output_folder, dura
             ret, frame = get_frame_from_url(inputPath)
 
         if ret:
-
+            if not q.empty():
+                data = q.get_nowait()
+                print("Got in",id,":",data)    
             # Save one frame per second
             if record_output and  time.time() - start_time > 1:
 
@@ -87,8 +93,9 @@ def analyze_footage(inputType, inputPath,model,record_output,output_folder, dura
             bboxs = results[0].boxes
             for bbox in bboxs:
                 dir = predict_direction(bbox.id,bbox.xyxy.cpu().numpy()[0], bbox.orig_shape)
-                if(dir != 0): 
-                    print(bbox.id,directions[dir])
+                if dir != 0 and bbox.id is not None: 
+                    #print(str(id),bbox.id.item(),directions[dir])
+                    q.put(f'{id} {int(bbox.id.item())} {directions[dir]}')
 
             #print("Enhanced",enhanced_frame)
             #print("Frame",frame)
@@ -113,12 +120,15 @@ if __name__ == "__main__":
     model1 = YOLO('yolov8n.pt')
     model2 = YOLO('yolov8n.pt')
 
+    # Communicate using the Queue
+    q = Queue() 
+
     # Define the video files for the trackers
-    path1 = "http://192.168.244.228:8080/shot.jpg"
-    path2 = 0
+    path1 = "./test_data/cam_am.mp4"
+    path2 = "./test_data/cam_bm.mp4"
     # Create the tracker threads
-    tracker_thread1 = threading.Thread(target=analyze_footage, args=(INPUT_MOB,path1,model1,record_output,output_folder, duration,1), daemon=True)
-    tracker_thread2 = threading.Thread(target=analyze_footage, args=(INPUT_WEBCAM,path2, model2,record_output,output_folder, duration,2), daemon=True)
+    tracker_thread1 = threading.Thread(target=analyze_footage, args=(INPUT_FILE,path2,model1,record_output,output_folder, duration,q,1), daemon=True)
+    tracker_thread2 = threading.Thread(target=analyze_footage, args=(INPUT_FILE,path1, model2,record_output,output_folder, duration,q,2), daemon=True)
 
     # Start the tracker threads
     tracker_thread1.start()
