@@ -9,7 +9,7 @@
         <img src="https://img.shields.io/badge/PyTorch-1.9-2BAF2B.svg" /></a>
        <a href= "https://github.com/julian-8897/Vanilla-VAE-PyTorch/blob/master/LICENSE.md">
         <img src="https://img.shields.io/badge/license-MIT-blue.svg" /></a>
-         
+
 </p>
 
 ## Implementation Details
@@ -40,7 +40,7 @@ $ pip install -r requirements.txt
 To train the model, please modify the `config.json` configuration file, and run:
 
 ```
-python train.py --config config.json
+python3 train.py --config config.json
 ```
 
 ### Resuming Training
@@ -48,7 +48,7 @@ python train.py --config config.json
 To resume training of the model from a checkpoint, you can run the following command:
 
 ```
-python train.py --resume path/to/checkpoint
+python3 train.py --resume path/to/checkpoint
 ```
 
 ### Testing
@@ -56,7 +56,7 @@ python train.py --resume path/to/checkpoint
 To test the model, you can run the following command:
 
 ```
-python test.py --resume path/to/checkpoint
+python3 test.py --resume path/to/checkpoint
 ```
 
 Generated plots are stored in the 'Reconstructions' and 'Samples' folders.
@@ -79,21 +79,18 @@ Generated plots are stored in the 'Reconstructions' and 'Samples' folders.
 | --------------------- | ----------------- |
 | ![][3]                | ![][4]            |
 
-[1]: https://github.com/julian-8897/Vanilla-VAE-PyTorch/blob/master/Reconstructions/recons_epoch_20_128dims.png
-[2]: https://github.com/julian-8897/Vanilla-VAE-PyTorch/blob/master/Samples/generated_samples_epoch_20_128dims.png
-[3]: https://github.com/julian-8897/Vanilla-VAE-PyTorch/blob/master/Reconstructions/recons_epoch_20_256dims.png
-[4]: https://github.com/julian-8897/Vanilla-VAE-PyTorch/blob/master/Samples/generated_samples_epoch_20_256dims.png
-
 ## References
 
 1. Original VAE paper "Auto-Encoding Variational Bayes" by Kingma & Welling:
    https://arxiv.org/abs/1312.6114
-
 2. Various implementations of VAEs in PyTorch:
    https://github.com/AntixK/PyTorch-VAE
-
 3. PyTorch template used in this project:
    https://github.com/victoresque/pytorch-template
-
 4. A comprehensive introduction to VAEs:
    https://arxiv.org/pdf/1906.02691.pdf
+
+[1]: https://github.com/julian-8897/Vanilla-VAE-PyTorch/blob/master/Reconstructions/recons_epoch_20_128dims.png
+[2]: https://github.com/julian-8897/Vanilla-VAE-PyTorch/blob/master/Samples/generated_samples_epoch_20_128dims.png
+[3]: https://github.com/julian-8897/Vanilla-VAE-PyTorch/blob/master/Reconstructions/recons_epoch_20_256dims.png
+[4]: https://github.com/julian-8897/Vanilla-VAE-PyTorch/blob/master/Samples/generated_samples_epoch_20_256dims.png
