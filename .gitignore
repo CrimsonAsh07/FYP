@@ -4,3 +4,4 @@ enhanced_frames/
 .vscode
 __pycache__
 *.pt
+RE_ID VAE/data
