@@ -35,3 +35,18 @@ class CelebDataLoader(BaseDataLoader):
         self.dataset = datasets.ImageFolder(
             self.data_dir, transform=transform)
         super().__init__(self.dataset, batch_size, shuffle, validation_split, num_workers)
+
+
+class ReidDataLoader(BaseDataLoader):
+    """
+    ReID DUKEMTMC data loading
+    Download and extract to data folder:
+    """
+    def __init__(self, data_dir, batch_size, shuffle=True, validation_split=0.0, num_workers=1):
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+        ])
+        self.data_dir = data_dir
+        self.dataset = datasets.ImageFolder(
+            self.data_dir, transform=transform)
+        super().__init__(self.dataset, batch_size, shuffle, validation_split, num_workers)

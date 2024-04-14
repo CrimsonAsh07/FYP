@@ -119,12 +119,12 @@ class VanillaVAE(BaseModel):
             in_channels = h_dim
 
         self.encoder = nn.Sequential(*modules)
-        self.fc_mu = nn.Linear(hidden_dims[-1]*4, latent_dims)
-        self.fc_var = nn.Linear(hidden_dims[-1]*4, latent_dims)
+        self.fc_mu = nn.Linear(hidden_dims[-1]*3*7, latent_dims)
+        self.fc_var = nn.Linear(hidden_dims[-1]*3*7, latent_dims)
 
         # Build Decoder
         modules = []
-        self.decoder_input = nn.Linear(latent_dims, hidden_dims[-1] * 4)
+        self.decoder_input = nn.Linear(latent_dims, hidden_dims[-1] * 3*7)
 
         hidden_dims.reverse()
 
@@ -142,7 +142,7 @@ class VanillaVAE(BaseModel):
             )
 
         self.decoder = nn.Sequential(*modules)
-
+        #print("hid -1", hidden_dims[-1])
         self.final_layer = nn.Sequential(
             nn.ConvTranspose2d(hidden_dims[-1],
                                hidden_dims[-1],
@@ -197,7 +197,7 @@ class VanillaVAE(BaseModel):
         """
 
         result = self.decoder_input(z)
-        result = result.view(-1, 512, 2, 2)
+        result = result.view(-1, 512, 7, 3)
         result = self.decoder(result)
         result = self.final_layer(result)
 

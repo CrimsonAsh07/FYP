@@ -52,6 +52,7 @@ class Trainer(BaseTrainer):
 
             self.optimizer.zero_grad()
             output, mu, logvar = self.model(data)
+            #print("Size of output: ", output.shape," data ", data.shape)
             loss = self.criterion(output, data, mu, logvar)
             loss.backward()
 
