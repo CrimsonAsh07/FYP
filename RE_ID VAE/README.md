@@ -41,6 +41,7 @@ To train the model, please modify the `config.json` configuration file, and run:
 
 ```
 python3 train.py --config config.json
+python train.py --config config.json
 ```
 
 ### Resuming Training

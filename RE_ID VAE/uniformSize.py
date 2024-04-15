@@ -51,4 +51,4 @@ def resize_to_average(images_path):
 
 # Replace 'path/to/your/images' with the actual path to your image directory
 
-resize_to_average('D:/AmeenCLG/Sem 8/FYPCode/RE_ID VAE/data/bounding_box_test')
+resize_to_average('./data/bounding_box_train')
