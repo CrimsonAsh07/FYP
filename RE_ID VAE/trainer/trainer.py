@@ -58,7 +58,7 @@ class Trainer(BaseTrainer):
             loss.backward()
 
             # optional gradient clipping
-            # torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=2.0, norm_type=2)
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=5.0, norm_type=1)
 
             self.optimizer.step()
             self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx)
