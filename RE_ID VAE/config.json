@@ -5,7 +5,7 @@
     "type": "VanillaVAE",
     "args": {
       "in_channels": 3,
-      "latent_dims": 128,
+      "latent_dims": 256,
       "flow": true
     }
   },
@@ -27,7 +27,7 @@
       "amsgrad": true
     }
   },
-  "loss": "elbo_loss",
+  "loss": "meanA_loss",
   "metrics": [],
   "lr_scheduler": {
     "type": "StepLR",
@@ -37,7 +37,7 @@
     }
   },
   "trainer": {
-    "epochs": 25,
+    "epochs": 10,
     "save_dir": "saved/",
     "save_period": 1,
     "verbosity": 2,
