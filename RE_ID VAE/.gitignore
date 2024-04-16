@@ -111,5 +111,6 @@ datasets/
 .idea/
 __MACOSX/
 
-
+data-train/
+data-test/
 data_backup
