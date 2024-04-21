@@ -159,33 +159,25 @@ def main(config):
 
     countT = 0
     countS = 0
-    similarImages = []
-
+    diss = 0
+    print(data_loader.shape)
     with torch.no_grad():
         for i, (data, target) in enumerate(data_loader):
             #show_image(data)
             data, target = data.to(device), target.to(device)
             mu, logvar, z = model.encode(data)
-            similar, distance = distance_metric_function(mu, mu0,distance_threshold, device='cuda' )
-            print(distance)
+            similar, distance = distance_metric_function(z, z0,distance_threshold, device='cuda' )
+            
 
                 
             if similar:
                 countS+=1
                 print("distance",  distance.item(), i, data_file_names[i])
-                similarImages.append(data.squeeze(0))
             countT+=1
-            if(countT > 90):
-                break
+            
             
 
     print(countS, countT)
-    vutils.save_image(similarImages,
-                              os.path.join(
-                "Samples",
-                f"Re-Identified.png"),
-                normalize=True,
-                nrow=12)
 
 if __name__ == '__main__':
     args = argparse.ArgumentParser(description='PyTorch Template')

@@ -15,7 +15,8 @@ import os
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import ImageGrid
 from PIL import Image  # Import for image processing
-
+from sklearn.metrics import roc_curve, auc
+import matplotlib.pyplot as plt
 #Fixes PosixPath Error
 import pathlib
 
@@ -51,13 +52,6 @@ def get_latent_representation(input_image_path, device, model):
         # Preprocess the image (e.g., resize)
         preprocessed_image = transform(img)  # Replace with your transformation
 
-        # Convert to PyTorch tensor
-        #preprocessed_image = torch.from_numpy(np.asarray(preprocessed_image)).float()
-
-        # Normalize the tensor (if needed)
-        #preprocessed_image = normalize(preprocessed_image)  # Replace with your normalization
-
-        # Add batch dimension (assuming model expects batches)
         preprocessed_image = preprocessed_image.unsqueeze(0)
 
         # Move the image to the appropriate device
@@ -69,14 +63,7 @@ def get_latent_representation(input_image_path, device, model):
             mu, logvar, z = model.encode(preprocessed_image)
 
         # Extract the latent representation (mu in this case)
-        
-        # recons = model.decode(z)
-        # vutils.save_image(recons.data,
-        #                   os.path.join(
-        #                       "Reconstructions",
-        #                       f"recons_Image1_epoch_{config['trainer']['epochs']}.png"),
-        #                   normalize=True,
-        #                   nrow=1)
+    
         return mu, logvar, z
 
     # Define transformations (replace with your specific preprocessing steps)
@@ -151,41 +138,98 @@ def main(config):
     mu0, logvar0, z0 = get_latent_representation(input_image_path, device, model)
 
     #print(f"Shape of latent representation: {latent_representation_firstImage.shape}")
-    distance_metric = Distance_Metric()
     distance_metric_function = getattr(Distance_Metric, config['distance_metric']['type'])
     distance_threshold = config['distance_metric']['Threshold']
-    print(config['distance_metric']['type'],config['distance_metric']['Threshold'] )
     data_file_names = os.listdir(data_dir)
 
     countT = 0
     countS = 0
-    similarImages = []
-
+ 
+    all_targets = []
+    all_scores = []
     with torch.no_grad():
         for i, (data, target) in enumerate(data_loader):
             #show_image(data)
+
             data, target = data.to(device), target.to(device)
+            
             mu, logvar, z = model.encode(data)
             similar, distance = distance_metric_function(mu, mu0,distance_threshold, device='cuda' )
-            print(distance)
-
-                
-            if similar:
-                countS+=1
-                print("distance",  distance.item(), i, data_file_names[i])
-                similarImages.append(data.squeeze(0))
+            all_scores.append(distance.item())
+            pN = int(data_file_names[i].split("_")[0])
             countT+=1
-            if(countT > 90):
+            if(pN == 2):
+                all_targets.append(0)
+            else:
+                all_targets.append(1)  
+            if(countT > 100):
                 break
-            
+    print(all_scores)
+    plot_roc_curve(all_targets, all_scores)
 
-    print(countS, countT)
-    vutils.save_image(similarImages,
-                              os.path.join(
-                "Samples",
-                f"Re-Identified.png"),
-                normalize=True,
-                nrow=12)
+  # Calculate metrics for different thresholds (optional)
+    thresholds = range(10, 21)  # Range of thresholds to evaluate
+    print("Threshold Values vs Metrics")
+    for threshold in thresholds:
+        accuracy, precision, recall = calculate_metrics(all_targets, all_scores, threshold)
+        print(f"Threshold: {threshold}, Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}")
+
+def plot_roc_curve(all_targets, all_scores):
+  """
+  Plots the ROC curve for different distance thresholds.
+
+  Args:
+      all_targets (list): List of true labels.
+      all_scores (list): List of predicted distances.
+  """
+
+  fpr, tpr, thresholds = roc_curve(all_targets, all_scores)
+  print(thresholds)
+  roc_auc = auc(fpr, tpr)
+
+  plt.figure(figsize=(8, 6))
+  plt.plot(fpr, tpr, label='ROC curve (area = %0.2f)' % roc_auc)
+  plt.plot([0, 1], [0, 1], 'k--', label='No Skill')
+  plt.xlim([0.0, 1.0])
+  plt.ylim([0.0, 1.05])
+  plt.xlabel('False Positive Rate')
+  plt.ylabel('True Positive Rate')
+  plt.title('ROC Curve')
+  plt.legend(loc="lower right")
+  plt.grid(True)
+  plt.show()
+
+
+def calculate_metrics(all_targets, all_scores, threshold=0.5):
+  """
+  Calculates accuracy, precision, and recall for a given threshold.
+
+  Args:
+      all_targets (list): List of true labels.
+      all_scores (list): List of predicted distances.
+      threshold (float): Distance threshold for classification (default: 0.5).
+
+  Returns:
+      tuple: A tuple containing:
+          - accuracy (float): Overall accuracy.
+          - precision (float): Precision.
+          - recall (float): Recall.
+  """
+
+  predictions = [1 if score < threshold else 0 for score in all_scores]
+  from sklearn.metrics import accuracy_score, precision_score, recall_score
+
+  accuracy = accuracy_score(all_targets, predictions)
+  precision = precision_score(all_targets, predictions)
+  recall = recall_score(all_targets, predictions)
+
+  return accuracy, precision, recall
+
+
+
+
+
+
 
 if __name__ == '__main__':
     args = argparse.ArgumentParser(description='PyTorch Template')

@@ -1,5 +1,5 @@
 {
-  "name": "VAE_CelebA",
+  "name": "VAE_REID",
   "n_gpu": 1,
   "arch": {
     "type": "VanillaVAE",
@@ -44,5 +44,9 @@
     "monitor": "min val_loss",
     "early_stop": 10,
     "tensorboard": true
+  },
+  "distance_metric": {
+    "type": "L2",
+    "Threshold": 20
   }
 }
