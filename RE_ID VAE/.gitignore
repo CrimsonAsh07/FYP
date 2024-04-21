@@ -114,3 +114,12 @@ __MACOSX/
 
 data_backup
 data-test
+data-pair
+Reconstructions/
+Samples/
+
+#ignore image files
+
+*.jpg
+*.jpeg
+*.png

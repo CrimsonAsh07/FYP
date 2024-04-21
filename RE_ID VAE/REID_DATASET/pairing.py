@@ -49,8 +49,12 @@ def process_image_group(source_folder, destination_folder, image_group, current_
 #     print(f"Warning: Uneven number of images for number {current_image_number}")
 #     return
 
-  mid = n // 2
-  for j in range(mid):
+ 
+  if(n%2):
+    ln = n-3
+  else:
+    ln = n-2
+  for j in range(0,ln,2):
     # Construct new filenames
     new_filename1 = f"{current_image_number}_{j + 1}_1.jpg"
     new_filename2 = f"{current_image_number}_{j + 1}_2.jpg"
@@ -60,13 +64,13 @@ def process_image_group(source_folder, destination_folder, image_group, current_
     dest_path1 = os.path.join(destination_folder, new_filename1)
     shutil.copy2(source_path1, dest_path1)  # Use copy2 to preserve metadata
 
-    source_path2 = os.path.join(source_folder, image_group[mid + j])
+    source_path2 = os.path.join(source_folder, image_group[j+1])
     dest_path2 = os.path.join(destination_folder, new_filename2)
     shutil.copy2(source_path2, dest_path2)
 
 # Example usage: Assuming source folder is "C:/images" and destination is "C:/renamed_images"
 
 
-source_path =""
-dest_path = ""
+source_path ="D:/AmeenCLG/Sem 8/FYPCode/RE_ID VAE/data-test/bounding_box_test"
+dest_path = "D:/AmeenCLG/Sem 8/FYPCode/RE_ID VAE/data-pair/bounding_box_test2"
 copy_and_rename_images(source_path,dest_path)
