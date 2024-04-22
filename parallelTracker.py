@@ -7,7 +7,8 @@ import requests
 from Zero_DCE import lowlight_test_frame
 from ultralytics import YOLO
 from queue import Queue 
-
+from threading import Lock  # Use a lock for thread synchronization
+from threading import local
 
 directions = ["none","left", "down", "right", "up"]
 INPUT_MOB = 0
@@ -41,7 +42,7 @@ def get_frame_from_url(url):
     ret = frame is not None
     return ret, frame
 
-def analyze_footage(inputType, inputPath,model,record_output,output_folder, duration,q, id):
+def analyze_footage(inputType, inputPath,model,record_output,output_folder, duration,q, id, lock):
     if record_output and not os.path.exists(output_folder):
         os.makedirs(output_folder)
     
@@ -62,10 +63,18 @@ def analyze_footage(inputType, inputPath,model,record_output,output_folder, dura
         else:
             ret, frame = get_frame_from_url(inputPath)
 
+        if not q.empty():
+            data = q.queue[0]
+            print("data1", data)
+            with lock:
+                if data["source"] != id:
+                    data = q.get_nowait()
+                    print("Got in",id,":",data)            
+                    q.task_done()    
+
         if ret:
-            if not q.empty():
-                data = q.get_nowait()
-                print("Got in",id,":",data)    
+        
+            
             # Save one frame per second
             if record_output and  time.time() - start_time > 1:
 
@@ -94,8 +103,10 @@ def analyze_footage(inputType, inputPath,model,record_output,output_folder, dura
             for bbox in bboxs:
                 dir = predict_direction(bbox.id,bbox.xyxy.cpu().numpy()[0], bbox.orig_shape)
                 if dir != 0 and bbox.id is not None: 
-                    #print(str(id),bbox.id.item(),directions[dir])
-                    q.put(f'{id} {int(bbox.id.item())} {directions[dir]}')
+                    
+                    
+                    print("                                        ",str(id),bbox.id.item(),directions[dir])
+                    q.put_nowait({"source": id, "destination": directions[dir], "person": bbox.id.item()})
 
             #print("Enhanced",enhanced_frame)
             #print("Frame",frame)
@@ -122,13 +133,14 @@ if __name__ == "__main__":
 
     # Communicate using the Queue
     q = Queue() 
-
+    lock = Lock()
     # Define the video files for the trackers
     path1 = "./test_data/cam_am.mp4"
     path2 = "./test_data/cam_bm.mp4"
+
     # Create the tracker threads
-    tracker_thread1 = threading.Thread(target=analyze_footage, args=(INPUT_FILE,path2,model1,record_output,output_folder, duration,q,1), daemon=True)
-    tracker_thread2 = threading.Thread(target=analyze_footage, args=(INPUT_FILE,path1, model2,record_output,output_folder, duration,q,2), daemon=True)
+    tracker_thread1 = threading.Thread(target=analyze_footage, args=(INPUT_FILE,path2,model1,record_output,output_folder, duration,q,1,lock), daemon=True)
+    tracker_thread2 = threading.Thread(target=analyze_footage, args=(INPUT_FILE,path1, model2,record_output,output_folder, duration,q,2, lock), daemon=True)
 
     # Start the tracker threads
     tracker_thread1.start()
