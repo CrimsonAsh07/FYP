@@ -21,39 +21,6 @@ import pathlib
 temp = pathlib.PosixPath
 pathlib.PosixPath = pathlib.WindowsPath
 
-def latent_traversal(model, samples, n_changes=5, val_range=(-1, 1)):
-    """ This function perform latent traversal on a VAE latent space
-    model_path: str
-        The absolute path of the model to load
-    fname: str
-        The filename to use for saving the latent traversal
-    samples:
-        The list of data examples to provide as input of the model
-    n_changes: int
-        The number of changes to perform on one latent dimension
-    val_range: tuple
-        The range of values that can be set for one latent dimension
-    """
-    # TODO: change the next two lines to retrieve the output of your encoder with pytorch
-    # m = tf.keras.models.load_model(model_path)
-    z_base = model.encode(samples)[-1]
-    z_base = z_base.cpu()
-    # END TODO
-    r, c = n_changes, z_base.shape[1]
-    vals = np.linspace(*val_range, r)
-    shape = samples[0].shape
-    for j, z in enumerate(z_base):
-        imgs = np.empty([r * c, *shape])
-        for i in range(c):
-            z_iter = np.tile(z, [r, 1])
-            z_iter[:, i] = vals
-            z_iter = torch.from_numpy(z_iter)
-            z_iter = z_iter.to(device)
-            imgs[r * i:(r * i) + r] = F.sigmoid(model.decode(z_iter)[-1])
-        plot_traversal(imgs, r, c, shape[-1] == 1, show=True)
-        # save_figure(fname, tight=False)
-
-
 def plot_traversal(imgs, r, c, greyscale, show=False):
     fig = plt.figure(figsize=(20., 20.))
     grid = ImageGrid(fig, 111, nrows_ncols=(r, c), axes_pad=0, direction="column")
