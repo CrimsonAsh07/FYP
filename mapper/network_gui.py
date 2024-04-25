@@ -47,7 +47,7 @@ def customEntry(parent_frame, label, row):
 
 root = CTk()
 root.title("Surveillance Mapper")
-root.geometry("930x390")
+root.geometry("920x390")
 root.config(bg=bgcolor)
 
 frame = CTkFrame(master=root, fg_color=lframe_color, bg_color=bgcolor, corner_radius=15)
@@ -90,7 +90,7 @@ def visualize_graph():
     canvas.get_tk_widget().pack(side='top', fill='both', expand=True)
 
 graph_frame = CTkFrame(master=root,corner_radius=15)
-graph_frame.grid(row=0, column=4, rowspan=5, sticky="nsew", padx=20, pady=25)
+graph_frame.grid(row=0, column=4, rowspan=5, sticky="nsew", padx=(10,20), pady=25)
 
 def create_graph_from_file(filename):
     G = nx.Graph()
