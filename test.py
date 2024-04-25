@@ -14,46 +14,12 @@ from torch.autograd import Variable
 import os
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import ImageGrid
-from PIL import Image  # Import for image processing
 
 #Fixes PosixPath Error
 import pathlib
 
 temp = pathlib.PosixPath
 pathlib.PosixPath = pathlib.WindowsPath
-
-def latent_traversal(model, samples, n_changes=5, val_range=(-1, 1)):
-    """ This function perform latent traversal on a VAE latent space
-    model_path: str
-        The absolute path of the model to load
-    fname: str
-        The filename to use for saving the latent traversal
-    samples:
-        The list of data examples to provide as input of the model
-    n_changes: int
-        The number of changes to perform on one latent dimension
-    val_range: tuple
-        The range of values that can be set for one latent dimension
-    """
-    # TODO: change the next two lines to retrieve the output of your encoder with pytorch
-    # m = tf.keras.models.load_model(model_path)
-    z_base = model.encode(samples)[-1]
-    z_base = z_base.cpu()
-    # END TODO
-    r, c = n_changes, z_base.shape[1]
-    vals = np.linspace(*val_range, r)
-    shape = samples[0].shape
-    for j, z in enumerate(z_base):
-        imgs = np.empty([r * c, *shape])
-        for i in range(c):
-            z_iter = np.tile(z, [r, 1])
-            z_iter[:, i] = vals
-            z_iter = torch.from_numpy(z_iter)
-            z_iter = z_iter.to(device)
-            imgs[r * i:(r * i) + r] = F.sigmoid(model.decode(z_iter)[-1])
-        plot_traversal(imgs, r, c, shape[-1] == 1, show=True)
-        # save_figure(fname, tight=False)
-
 
 def plot_traversal(imgs, r, c, greyscale, show=False):
     fig = plt.figure(figsize=(20., 20.))
@@ -89,47 +55,6 @@ def interpolate(autoencoder, x_1, x_2, n=12):
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
     plt.savefig('linear_interpolation.png')
-
-def get_latent_representation(input_image_path, transform, device, model):
-        """
-        Extracts the latent space representation for a given image path.
-
-        Args:
-            input_image_path (str): Path to the input image file (JPEG).
-
-        Returns:
-            torch.Tensor: The latent space representation (mu) tensor.
-        """
-
-        # Load image using PIL
-        img = Image.open(input_image_path).convert('RGB')  # Assuming RGB image
-
-        # Preprocess the image (e.g., resize)
-        preprocessed_image = transform(img)  # Replace with your transformation
-
-        # Convert to PyTorch tensor
-        preprocessed_image = torch.from_numpy(np.asarray(preprocessed_image)).float()
-
-        # Normalize the tensor (if needed)
-        #preprocessed_image = normalize(preprocessed_image)  # Replace with your normalization
-
-        # Add batch dimension (assuming model expects batches)
-        preprocessed_image = preprocessed_image.unsqueeze(0)
-
-        # Move the image to the appropriate device
-        preprocessed_image = preprocessed_image.to(device)
-
-        # Encode the image to get the latent representation
-        with torch.no_grad():
-            output, mu, logvar = model(preprocessed_image)
-
-        # Extract the latent representation (mu in this case)
-        latent_representation = mu
-
-        return latent_representation
-
-    # Define transformations (replace with your specific preprocessing steps)
-    
 
 
 def main(config):
@@ -171,23 +96,10 @@ def main(config):
     total_loss = 0.0
     # total_metrics = torch.zeros(len(metric_fns))
 
-    transform = transforms.Compose([  # Adjust based on model input size
-        transforms.ToTensor(),
-    ])
-
-    #normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # ImageNet normalization
-
-    # Example usage:
-    input_image_path = "path/to/your/image.jpg"
-
-    # Get the latent representation for the input image
-    latent_representation = get_latent_representation(input_image_path, transform, device, model)
-
-    print(f"Shape of latent representation: {latent_representation.shape}")
-
     with torch.no_grad():
         for i, (data, target) in enumerate(tqdm(data_loader)):
             data, target = data.to(device), target.to(device)
+            print(data.shape)
             output, mu, logvar = model(data)
 
             # computing loss, metrics on test set
