@@ -2,13 +2,26 @@ import argparse
 import torch
 from model import model as module_arch
 from parse_config import ConfigParser
-
+import torchvision.transforms as transforms
 #Fixes PosixPath Error
 import pathlib
-
+import cv2
 temp = pathlib.PosixPath
 pathlib.PosixPath = pathlib.WindowsPath
 
+transformer = transforms.ToTensor()
+def L2M(z1, mu1_1, logvar1, z2, mu1_2, logvar2, threshold, device,w_z=1/3, w_mu1=1/3, w_logvar=1/3):
+
+        tensor1 = mu1_1.to(device)
+        tensor2 = mu1_2.to(device)
+
+        # Calculate squared difference efficiently using broadcasting
+        squared_diff = torch.pow(tensor1 - tensor2, 2)
+
+        # Reduce across all dimensions (efficiently calculates sum of squared differences)
+        euclidean_distance = torch.sqrt(torch.sum(squared_diff, dim=tuple(range(len(squared_diff.size())))))
+        
+        return euclidean_distance < threshold,euclidean_distance
 
 def getModelFromConfig(config):
 
@@ -33,6 +46,64 @@ def getModelFromConfig(config):
     model.eval()
     return model
 
+def get_tensor(device, crop_object):
+    image = cv2.cvtColor(crop_object, cv2.COLOR_BGR2RGB)
+    resized_image = cv2.resize(image, (96, 224), interpolation=cv2.INTER_AREA)
+    tensor = transformer(resized_image)
+    tensor = tensor.unsqueeze(0)
+    tensor = tensor.to(device)
+    return tensor
+
+def get_pairing(model, init_images, target_images):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    init_tensors = []
+    target_tensors = []
+    
+    for i in range(len(init_images)):
+        init_tensors.append(get_tensor(device, init_images[i][1]))
+        target_tensors.append(get_tensor(device, target_images[i][1]))
+
+    latent_space1 = [] 
+    latent_space2= []
+
+    for i in range(len(init_tensors)):
+        mu1, logvar1, z1 = model.encode(init_tensors[i])
+        mu2, logvar2, z2 = model.encode(target_tensors[i])
+             #show_image(image1[i])
+             #show_image(image2[i])
+        latent_space1.append([z1,mu1, logvar1])
+        latent_space2.append([z2,mu2, logvar2])
+
+
+    num_elements = len(latent_space1)
+    operation_matrix = torch.zeros((num_elements, num_elements))
+    
+    for i in range(num_elements):
+        for j in range(num_elements):
+            tensor1 = latent_space1[i]
+            tensor2 = latent_space2[j]
+            similarity ,operation_matrix[i, j] = L2M(tensor1[0], tensor1[1], tensor1[2],tensor2[0], tensor2[1], tensor2[2], 25, device)
+    
+        #print(operation_matrix)
+        #print(pN) 
+        
+    # if(num_elements) ==1:
+    #     return [(init_images[0][0], target_images[0][0])]    
+    
+    # if (operation_matrix[0,0] + operation_matrix[1,1] > operation_matrix[0,1] + operation_matrix[1,0] ):
+    #     return [(init_images[1][0], target_images[0][0]),(init_images[0][0], target_images[1][0])]    
+    # elif (operation_matrix[0,0] + operation_matrix[1,1] <= operation_matrix[0,1] + operation_matrix[1,0] ):  
+    #     return [(init_images[0][0], target_images[0][0]),(init_images[1][0], target_images[1][0])]    
+    if(num_elements) ==1:
+        return [0]    
+    
+    if (operation_matrix[0,0] + operation_matrix[1,1] > operation_matrix[0,1] + operation_matrix[1,0] ):
+        return [1,0]    
+    elif (operation_matrix[0,0] + operation_matrix[1,1] <= operation_matrix[0,1] + operation_matrix[1,0] ):  
+        return [0,1]                
+    
+
+    
 
 if __name__ == '__main__':
     args = argparse.ArgumentParser(description='PyTorch Template')

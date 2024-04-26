@@ -1,3 +1,2 @@
-A B C 0 0 R
-B C D 0 0 NR
-C D 0 0 0 NR
+0 ~ ~ 1 ~ NR
+1 ~ ~ ~ 0 NR

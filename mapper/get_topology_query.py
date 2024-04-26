@@ -1,6 +1,6 @@
 import networkx as nx
 
-def create_graph_from_file(filename):
+def create_graph_from_topology(filename):
     G = nx.DiGraph()
     node_dict = {}  
     
@@ -36,30 +36,12 @@ def create_graph_from_file(filename):
     
     return G
 
-def query_graph(graph, node, direction):
+def query_graph(node, direction, graph):
+    
     for successor, attrs in graph[node].items():
         if attrs["direction"] == direction:
             return successor
     return None
 
-def node_isRestricted(graph,node):
-    if graph.nodes[node]["restricted"] == "R":
-        return True
-    return False
+  # Updated file path
 
-file_path = "mapper/network_map.txt"  # Updated file path
-graph = create_graph_from_file(file_path)
-
-while True:
-    query = input("Enter query (e.g., 'A left'): ").split()
-    if len(query) != 2:
-        print("Invalid query format. Please enter in the format 'Node Direction'.")
-        continue
-    
-    node, direction = query
-    result = query_graph(graph, node, direction)
-    print(node_isRestricted(graph,node))
-    if result:
-        print("Result:", result)
-    else:
-        print("No node found in the specified direction or node does not exist.")

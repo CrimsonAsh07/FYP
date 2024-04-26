@@ -18,13 +18,13 @@ def submit_values():
     if not name:
         return
 
-    up = up_entry.get() if up_entry.get() else '0'
-    down = down_entry.get() if down_entry.get() else '0'
-    left = left_entry.get() if left_entry.get() else '0'
-    right = right_entry.get() if right_entry.get() else '0'
+    up = up_entry.get() if up_entry.get() else '~'
+    down = down_entry.get() if down_entry.get() else '~'
+    left = left_entry.get() if left_entry.get() else '~'
+    right = right_entry.get() if right_entry.get() else '~'
     restricted = 'R' if restricted_checkbox.get() else 'NR'
     
-    with open("network_map.txt", "a") as file:
+    with open("mapper/network_map.txt", "a") as file:
         file.write(f"{name} {up} {down} {left} {right} {restricted}\n")
     
     name_entry.delete(0, END)
@@ -34,7 +34,7 @@ def submit_values():
     right_entry.delete(0, END)
 
     global G  
-    G = create_graph_from_file("network_map.txt")  
+    G = create_graph_from_file("mapper/network_map.txt")  
     visualize_graph()
     update_list_frame()
 
@@ -108,7 +108,7 @@ def create_graph_from_file(filename):
                 node_dict[parent] = True
 
             for child in children:
-                if child != '0': 
+                if child != '~': 
                     if child not in node_dict:
                         G.add_node(child)
                         node_dict[child] = True
@@ -116,7 +116,7 @@ def create_graph_from_file(filename):
     
     return G
 
-filename = "network_map.txt"
+filename = "mapper/network_map.txt"
 G = create_graph_from_file(filename)
 
 visualize_graph()
@@ -129,7 +129,7 @@ list_frame.grid(row=0, column=5, rowspan=2, sticky="nsew", padx=0, pady=20)
 title_label = CTkLabel(list_frame, text="NODE LIST", font=("Consolas", 20, "bold"), justify="center", text_color="white")
 title_label.grid(column=0, columnspan=2, pady=(8,20))
 
-delete_icon = CTkImage(Image.open("icon.png"), size=(25, 25))
+delete_icon = CTkImage(Image.open("mapper/icon.png"), size=(25, 25))
 
 def update_list_frame():
     for widget in list_frame.winfo_children():
@@ -151,9 +151,9 @@ def update_list_frame():
 def delete_node(node):
     G.remove_node(node)
     
-    with open("network_map.txt", "r") as file:
+    with open("mapper/network_map.txt", "r") as file:
         lines = file.readlines()
-    with open("network_map.txt", "w") as file:
+    with open("mapper/network_map.txt", "w") as file:
         for line in lines:
             if line.split()[0] == node:  # If the node has its own entry
                 continue  
