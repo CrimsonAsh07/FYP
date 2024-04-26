@@ -1,6 +1,8 @@
 import networkx as nx
 
-def create_graph_from_topology(filename):
+restricted_default_value = "NR"
+
+def create_graph_from_file(filename):
     G = nx.DiGraph()
     node_dict = {}  
     
@@ -15,12 +17,14 @@ def create_graph_from_topology(filename):
                 G.add_node(parent, restricted=restricted)
                 node_dict[parent] = True
 
+            # To update a node's restricted value if it was created in a previous line with the default value
+            G.nodes[parent]["restricted"] = restricted
+
             for i, child in enumerate(children, start=1):
                
                 if child != '~': 
-                    print(parent,child,i)
                     if child not in node_dict:
-                        G.add_node(child)
+                        G.add_node(child, restricted = restricted_default_value)  
                         node_dict[child] = True
 
                     if i == 1:
@@ -31,8 +35,7 @@ def create_graph_from_topology(filename):
                         direction = "left"
                     elif i == 4:
                         direction = "right"     
-                    print(direction)
-                    G.add_edge(parent, child,direction=direction)  
+                    G.add_edge(parent, child, direction=direction)  
     
     return G
 
@@ -45,3 +48,7 @@ def query_graph(node, direction, graph):
 
   # Updated file path
 
+def node_isRestricted(graph, node):
+    if graph.nodes[node]["restricted"] == "R":
+        return "Restricted Area"
+    return "Unrestricted Area"
