@@ -23,15 +23,27 @@ def submit_values():
     left = left_entry.get() if left_entry.get() else '~'
     right = right_entry.get() if right_entry.get() else '~'
     restricted = 'R' if restricted_checkbox.get() else 'NR'
+
+    forward = up_geo_entry.get() if up_geo_entry.get() else '~'
+    backward = down_geo_entry.get() if down_geo_entry.get() else '~'
+    leftg = left_geo_entry.get() if left_geo_entry.get() else '~'
+    rightg = right_geo_entry.get() if right_geo_entry.get() else '~'
     
     with open("mapper/network_map.txt", "a") as file:
         file.write(f"{name} {up} {down} {left} {right} {restricted}\n")
+
+    with open("mapper/geographic_map.txt", "a") as file:
+        file.write(f"{name} {forward} {backward} {leftg} {rightg} {restricted}\n")
     
     name_entry.delete(0, END)
     up_entry.delete(0, END)
     down_entry.delete(0, END)
     left_entry.delete(0, END)
     right_entry.delete(0, END)
+    up_geo_entry.delete(0, END)
+    down_geo_entry.delete(0, END)
+    left_geo_entry.delete(0, END)
+    right_geo_entry.delete(0, END)
 
     global G  
     G = create_graph_from_file("mapper/network_map.txt")  
@@ -40,14 +52,14 @@ def submit_values():
 
 def customEntry(parent_frame, label, row):
     entry = CTkEntry(parent_frame, placeholder_text=label, placeholder_text_color=text_color, justify="center",
-                     bg_color=lframe_color, fg_color=bgcolor, height=30, width=150, corner_radius=7.5,
+                     bg_color=lframe_color, fg_color=bgcolor, height=30, width=150, corner_radius=5,
                      font=("Consolas", 15, "bold"), text_color="white", border_width=0)
     entry.grid(row=row, columnspan=2, padx=10, pady=(0, 5))
     return entry
 
 root = CTk()
 root.title("Surveillance Mapper")
-root.geometry("920x390")
+root.geometry("920x585")
 root.config(bg=bgcolor)
 
 frame = CTkFrame(master=root, fg_color=lframe_color, bg_color=bgcolor, corner_radius=15)
@@ -57,18 +69,30 @@ CTkLabel(frame, text="ADD CAMERA", font=("Consolas", 20, "bold"), justify="cente
          text_color="white").grid(row=0, columnspan=2, pady=(20,20))
 
 name_entry = customEntry(frame, "CAMERA NAME*", row=1)
-up_entry = customEntry(frame, "UP", row=2)
-down_entry = customEntry(frame, "DOWN", row=3)
-left_entry = customEntry(frame, "LEFT", row=4)
-right_entry = customEntry(frame, "RIGHT", row=5)
+
+CTkLabel(frame, text="CAMERA TOPOLOGY", font=("Consolas", 15, "bold"), justify="center", 
+         text_color="white").grid(row=2, columnspan=2, pady=(0,5))
+
+up_entry = customEntry(frame, "UP", row=3)
+down_entry = customEntry(frame, "DOWN", row=4)
+left_entry = customEntry(frame, "LEFT", row=5)
+right_entry = customEntry(frame, "RIGHT", row=6)
+
+CTkLabel(frame, text="GEOGRAPHIC TOPOLOGY", font=("Consolas", 15, "bold"), justify="center", 
+         text_color="white").grid(row=7, columnspan=2, pady=(0,5))
+
+up_geo_entry = customEntry(frame, "FORWARD", row=8)
+down_geo_entry = customEntry(frame, "BACKWARD", row=9)
+left_geo_entry = customEntry(frame, "LEFT", row=10)
+right_geo_entry = customEntry(frame, "RIGHT", row=11)
 
 restricted_checkbox = CTkCheckBox(frame, text="Restricted", font=("Consolas", 15, "bold"),
                                   fg_color=text_color,hover_color=bgcolor, corner_radius=5)
-restricted_checkbox.grid(row=6, columnspan=2, pady=(10,0))
+restricted_checkbox.grid(row=12, columnspan=2, pady=(5,0))
 
 CTkButton(frame, text="SUBMIT", font=("Consolas", 15, "bold"), 
           fg_color=purple_color, bg_color=lframe_color, hover_color=purple_hover, 
-          width=150, corner_radius=5, command=submit_values).grid(row=7, columnspan=2, padx=20, pady=(15,20))
+          width=150, corner_radius=5, command=submit_values).grid(row=13, columnspan=2, padx=20, pady=(15,20))
 
 #############################
 
@@ -76,9 +100,17 @@ def visualize_graph():
     plt.figure(figsize=(5, 3.5))
     pos = nx.spring_layout(G)
 
-    node_colors = [red_color if G.nodes[node].get('restricted') == 'R' else purple_color for node in G.nodes()]
+    for node in G.nodes():
+        if G.nodes[node].get('restricted') == 'R':
+            G.nodes[node]['color'] = red_color
+        else:
+            G.nodes[node]['color'] = purple_color
+    
+    # Retrieve node colors from the graph object
+    node_colors = [G.nodes[node].get('color', purple_color) for node in G.nodes()]
+    
     nx.draw(G, pos, with_labels=True, node_color=node_colors, font_color='white', font_weight="bold", ax=plt.gca())
-          
+         
     plt.axis('off')  
     plt.tight_layout()  
 
@@ -107,10 +139,12 @@ def create_graph_from_file(filename):
                 G.add_node(parent, restricted=restricted)
                 node_dict[parent] = True
 
+            G.nodes[parent]["restricted"] = restricted
+
             for child in children:
                 if child != '~': 
                     if child not in node_dict:
-                        G.add_node(child)
+                        G.add_node(child, restricted = "NR")
                         node_dict[child] = True
                     G.add_edge(parent, child)  
     
