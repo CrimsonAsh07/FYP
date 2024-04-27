@@ -3,3 +3,8 @@ Time: 19:10
 Phone Number: +918248822161
 Message: Hello from your Python script!
 --------------------
+Date: 27/4/2024
+Time: 17:47
+Phone Number: +918248822161
+Message: You have entered a restricted area.Please move backward to the previous room to exit.
+--------------------
