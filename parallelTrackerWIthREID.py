@@ -18,7 +18,8 @@ from parse_config import ConfigParser
 from getModel import getModelFromConfig, get_pairing
 import argparse
 import torch
-
+from event_logger import sqlite
+from event_logger import event_logger
 
 directions = ["none","left", "down", "right", "up"]
 INPUT_MOB = 0
@@ -119,6 +120,7 @@ def get_frame_from_url(url):
     return ret, frame
 
 def analyze_footage(inputType, inputPath,record_output,output_folder, duration, id, reidModel):
+   
     model = YOLO('yolov8n.pt')
     if record_output and not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -134,7 +136,9 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
     count = 0
 
     local_id_mapping = {}
+    restricted_detections = {}
 
+    conn = sqlite.sqlite3.connect('surveillance_db.db') # connect to sqlite
     print("\n\n\n")
     while True:
         # Capture frame-by-frame
@@ -143,10 +147,6 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
         else:
             ret, frame = get_frame_from_url(inputPath)
 
-        if len(reid_map[id].q) > 0:
-            
-            with reid_map[id].lock:
-                pass
                 #[print(x) for x in reid_map[id].q.values()]           
                  
 
@@ -182,9 +182,17 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
             for bbox in bboxs:
                 
                 dir = predict_direction(bbox.id,bbox.xyxy.cpu().numpy()[0], bbox.orig_shape)
-                
+                if bbox.id is not None:
+                    bboxId = bbox.id.item()
+                    if bbox.conf.item() > 0.7 and bboxId not in restricted_detections:
+                        if node_isRestricted(graph,chr(id + ord('0'))) == "Unrestricted Area":
+                            pass
+                        else:
+                            restricted_detections[bboxId]='1'
+
+
                 if dir != 0 and bbox.id is not None: 
-                    
+                    bboxId = bbox.id.item()
                     #if someone new detected, find out if he needs to be reid
                         
                     #if re id then reid, add to local map, and update global map
@@ -193,7 +201,7 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
                     if bbox.conf.item() > 0.7:
                         boxes = bbox.xyxy.tolist()[0]
                         crop_object = frame[int(boxes[1]):int(boxes[3]), int(boxes[0]):int(boxes[2])]
-                        bboxId = bbox.id.item()
+                        
                         if bboxId not in local_id_mapping and bboxId not in to_be_reid:
                             
                             if len(reid_map[id].q) > 0 : #add to reid queue
@@ -202,7 +210,8 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
             
                             elif len(reid_map[id].q)== 0: #new person
                                 pid = add_person(Person(bboxId,id, crop_object))
-                                
+                                event_logger.write_log(log_file_path, f"Person {bboxId} has been located at camera {id}")
+                                sqlite.record_entry(id,bboxId, conn)
                                 local_id_mapping[bboxId] = localMappingPerson(pid, STATUS_IDD, dir)
                         else:
                             get_dest = query_graph(chr(id + ord('0')), directions[dir], graph)
@@ -215,7 +224,7 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
                                         reid_map[int(get_dest)].q[g_id] = ReIDPerson(g_id, id)
                                         update_person_image(g_id, crop_object)
 
-                #re 
+                #mapping ids to global
                                 
                 if(bbox.id is not None):
                     idItem = bbox.id.item()
@@ -250,6 +259,8 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
                 pairing = get_pairing(reidModel, reid_init_images, reid_target_images)
 
                 for i in range(len(pairing)):
+                    event_logger.write_log(log_file_path, f"Person {reid_init_images[i][0]} has exited camera {shared_person[reid_init_images[i][0]].camera_id} and entered camera {id}")
+                    sqlite.record_entry(id,reid_init_images[i][0], conn)
                     update_person_location(reid_init_images[i][0], id )   
                     update_person_image(reid_init_images[i][0], reid_target_images[pairing[i]][1]) #update image to re ided one
                     
@@ -302,31 +313,34 @@ if __name__ == "__main__":
     graph_file_path = "mapper/network_map.txt"
     graph = create_graph_from_file(graph_file_path)
   
-    n_camera = 2
+    n_camera = graph.number_of_nodes()
     # Communicate using the Queue
     reid_map = [ LockArray() for i in range(n_camera)]
     
     shared_person = {}  # Shared dictionary for person locations
     shared_person_lock = Lock()
 
+    # Event Logger
+    log_folder_path, log_file_path = event_logger.create_unique_folder_and_log()
 
 
     # Define the video files for the trackers
-    path1 = "./test_data/cam_left.mp4"
-    path2 = "./test_data/cam_right.mp4"
+    paths = [ "./test_data/cam_left.mp4","./test_data/cam_right.mp4"]
 
     
     # Create the tracker threads
-    tracker_thread1 = threading.Thread(target=analyze_footage, args=(INPUT_FILE,path2,record_output,output_folder, duration,1, reidModel), daemon=True)
-    tracker_thread2 = threading.Thread(target=analyze_footage, args=(INPUT_FILE,path1,record_output,output_folder, duration,0,reidModel), daemon=True)
+    threads = []
+    for i in range(n_camera):
+        threads.append(threading.Thread(target=analyze_footage, args=(INPUT_FILE,paths[i],record_output,output_folder, duration,i, reidModel), daemon=True))
 
     # Start the tracker threads
-    tracker_thread1.start()
-    tracker_thread2.start()
+        
+    for i in range(n_camera):
+        threads[i].start()
 
     # Wait for the tracker threads to finish
-    tracker_thread1.join()
-    tracker_thread2.join()
+    for i in range(n_camera):
+        threads[i].join()
 
     # Clean up and close windows
     cv2.destroyAllWindows()

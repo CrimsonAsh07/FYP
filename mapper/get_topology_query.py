@@ -8,7 +8,7 @@ current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 def send_whatsapp_message(phone_number, message):
     try:
         now = datetime.datetime.now()
-        kit.sendwhatmsg_instantly(phone_number, message,10, True,5)  
+        kit.sendwhatmsg_instantly(phone_number, message,6, True,3)  
         print("Message sent successfully!")
         return True
     except Exception as e:
@@ -75,8 +75,8 @@ def node_isRestricted(graph, node):
         msg+=messages.get(path, "Please wait for security personnel to guide you.")
         if loc:
             msg += f"  *[Room {loc}]*"
-
-        send_whatsapp_message("+918248822161", msg)
+        
+        send_whatsapp_message("+917338870517", msg)
 
     else:
         return "Unrestricted Area"

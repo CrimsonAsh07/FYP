@@ -7,3 +7,4 @@ __pycache__
 RE_ID_VAE/data
 mapper/geographic_map.txt
 mapper/network_map.txt
+logs
