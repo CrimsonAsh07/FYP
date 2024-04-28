@@ -2,6 +2,8 @@ import networkx as nx
 import datetime
 import pywhatkit as kit
 
+current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
 def send_whatsapp_message(phone_number, message):
     try:
         now = datetime.datetime.now()
@@ -56,32 +58,38 @@ def query_graph(graph, node, direction):
 
 def node_isRestricted(graph, node):
     if graph.nodes[node].get("restricted") == "R":
-        path = path_finder(graph, node)
-        msg = "You have entered a restricted area.\n"
+        path, loc = path_finder(graph, node)
+        msg = "*A visitor has entered a restricted area.*\n"
         messages = {
-            "forward": "Please move forward to the next room to exit.",
-            "backward": "Please move backward to the previous room to exit.",
-            "left": "Please turn left from your current location to exit.",
-            "right": "Please turn right from your current location to exit.",
+            "forward": "Please guide them to the next room.",
+            "backward": "Please guide them to the previous room.",
+            "left": "Please guide them to the room to their left.",
+            "right": "Please guide them to the room to their right.",
         }
 
+        msg += f"_Location_: {node}\n"
+        msg += f"_Time_: {current_time}\n"
         msg+=messages.get(path, "Please wait for security personnel to guide you.")
+        if loc:
+            msg += f"  *[Room {loc}]*"
 
-        send_whatsapp_message("+918248822161",msg)
+        send_whatsapp_message("+918248822161", msg)
 
     else:
         return "Unrestricted Area"
 
 def path_finder(graph, node):
-    neighbors = graph.neighbors(node)
-    with open("mapper/geographic_map.txt", "r") as file:
-        for line in file:
-            if line.startswith(node):
-                adjacency_list = line.strip().split()[1:]  
-                for i, neighbor in enumerate(neighbors):
-                    if graph.nodes[neighbor].get("restricted") != "R" and neighbor in adjacency_list:
-                        return ["forward", "backward", "left", "right"][i]
-    return "No Unrestricted Areas detected"
+    neighbors = list(graph.neighbors(node))
+    for neighbor in neighbors:
+        if graph.nodes[neighbor].get('restricted') != 'R':
+            with open("mapper/geographic_map.txt", "r") as file:
+                for line in file:
+                    if line.startswith(node):
+                        adjacency_list = line.strip().split()[1:]  
+                        for i, v in enumerate(adjacency_list):
+                            if v == neighbor:
+                                return ["forward","backward","left","right"][i], v
+    return "No Unrestricted Areas detected" 
 
 
 file_path = "mapper/network_map.txt"  # Updated file path
@@ -96,9 +104,9 @@ while True:
     node, direction = query
     result = query_graph(graph, node, direction)
     # print(graph.nodes[node].get("restricted", None))        
-    print(node_isRestricted(graph,node))
-    if result:
-        print("Result:", result)
-    else:
-        print("No node found in the specified direction or node does not exist.")
+    node_isRestricted(graph,node)
+    # if result:
+    #     print("Result:", result)
+    # else:
+    #     print("No node found in the specified direction or node does not exist.")
 
