@@ -5,23 +5,17 @@ from torchvision import transforms
 import PIL
 import matplotlib.pyplot as plt
 import argparse
-import numpy as np
 import torch
 from tqdm import tqdm
-import data_loader.data_loaders as module_data
-import model.loss as module_loss
-import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
 from torch.nn import functional as F
-import torchvision.utils as vutils
 from torchvision import transforms
 from torch.autograd import Variable
 import os
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import ImageGrid
-from PIL import Image  
-
+import time
 class PairDataset(Dataset):
   def __init__(self, image_dir, device):
     self.image_dir = image_dir
@@ -155,11 +149,10 @@ class Distance_Metric:
 def main(config):
     logger = config.get_logger('test')
 
-    
+  
     # build model architecture
     model = config.init_obj('arch', module_arch)
     logger.info(model)
-
     
 
     logger.info('Loading checkpoint: {} ...'.format(config.resume))
@@ -196,7 +189,8 @@ def main(config):
 
     dataset = PairDataset(config['data_loader']['args']['data_dir'], device)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=2, shuffle=True)
-
+    start = time.time()
+    
 
     with torch.no_grad():
        total_samples = 0
@@ -222,7 +216,7 @@ def main(config):
             
           num_elements = len(latent_space1)
           operation_matrix = torch.zeros((num_elements, num_elements))
-          indices = [-1,-2]
+
           minVal = float('inf')
           for i in range(num_elements):
             for j in range(num_elements):
@@ -231,7 +225,7 @@ def main(config):
               similarity ,operation_matrix[i, j] = distance_metric_function(tensor1[0], tensor1[1], tensor1[2],tensor2[0], tensor2[1], tensor2[2], distance_threshold, device)
               if(operation_matrix[i,j] < minVal):
                 minVal = operation_matrix[i,j]
-                indices = [i,j]  
+
           #print(operation_matrix)
           #print(pN) 
           if(len(latent_space1) > 1 and len(latent_space2) > 1):      
@@ -246,7 +240,9 @@ def main(config):
             
           
           
-    
+    end = time.time()
+    runtime = end - start
+    print("FPS: ", len(pnList)/runtime)
     print("Total Pairs tested: ",len(pnList), " Total Images Tested: ", len(pnList)*2)
     print("Correct Predictions: ", correct_predict)
     print("Accuracy: ", correct_predict/total_samples )

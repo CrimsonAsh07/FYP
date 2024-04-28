@@ -8,6 +8,7 @@ import pathlib
 import cv2
 temp = pathlib.PosixPath
 pathlib.PosixPath = pathlib.WindowsPath
+from scipy.optimize import linear_sum_assignment
 
 transformer = transforms.ToTensor()
 def L2M(z1, mu1_1, logvar1, z2, mu1_2, logvar2, threshold, device,w_z=1/3, w_mu1=1/3, w_logvar=1/3):
@@ -82,25 +83,13 @@ def get_pairing(model, init_images, target_images):
         for j in range(num_elements):
             tensor1 = latent_space1[i]
             tensor2 = latent_space2[j]
-            similarity ,operation_matrix[i, j] = L2M(tensor1[0], tensor1[1], tensor1[2],tensor2[0], tensor2[1], tensor2[2], 25, device)
-    
-        #print(operation_matrix)
-        #print(pN) 
-        
-    # if(num_elements) ==1:
-    #     return [(init_images[0][0], target_images[0][0])]    
-    
-    # if (operation_matrix[0,0] + operation_matrix[1,1] > operation_matrix[0,1] + operation_matrix[1,0] ):
-    #     return [(init_images[1][0], target_images[0][0]),(init_images[0][0], target_images[1][0])]    
-    # elif (operation_matrix[0,0] + operation_matrix[1,1] <= operation_matrix[0,1] + operation_matrix[1,0] ):  
-    #     return [(init_images[0][0], target_images[0][0]),(init_images[1][0], target_images[1][0])]    
-    if(num_elements) ==1:
-        return [0]    
-    
-    if (operation_matrix[0,0] + operation_matrix[1,1] > operation_matrix[0,1] + operation_matrix[1,0] ):
-        return [1,0]    
-    elif (operation_matrix[0,0] + operation_matrix[1,1] <= operation_matrix[0,1] + operation_matrix[1,0] ):  
-        return [0,1]                
+            
+            similarity ,distance = L2M(tensor1[0], tensor1[1], tensor1[2],tensor2[0], tensor2[1], tensor2[2], 25, device)
+            operation_matrix[i, j] = distance.item()
+    pairing = linear_sum_assignment(operation_matrix)
+    row_pair,col_pair = linear_sum_assignment(operation_matrix)              
+
+    return col_pair
     
 
     
