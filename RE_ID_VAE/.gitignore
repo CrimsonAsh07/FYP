@@ -117,7 +117,7 @@ data-test
 data-pair
 Reconstructions/
 Samples/
-
+data-cuhk
 #ignore image files
 
 *.jpg

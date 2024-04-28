@@ -7,7 +7,6 @@ import requests
 
 from Zero_DCE import lowlight_test_frame
 from ultralytics import YOLO
-from queue import Queue 
 from threading import Lock  # Use a lock for thread synchronization
 from mapper.get_topology_query import *
 import matplotlib.pyplot as plt
@@ -60,6 +59,7 @@ class ReIDPerson: #reid_map queue object
         self.status = STATUS_IDD
         self.g_id = g_id
         self.camera_source = camera_source
+    
 
     def __str__(self):
         return f"status: {self.status}, g_id: {self.g_id}, cam: {self.camera_source}"    
@@ -69,10 +69,10 @@ class LockArray:
         self.lock = Lock()
         self.q = {}
 
-class toReID:
-    def __init__(self, pid, photo):
-        self.pid = pid
-        self.photo = photo
+# class toReID:
+#     def __init__(self, pid, photo):
+#         self.pid = pid
+#         self.photo = photo
 
 
 def update_person_location(person_id, camera_id):
@@ -135,7 +135,7 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
 
     local_id_mapping = {}
 
-    
+    print("\n\n\n")
     while True:
         # Capture frame-by-frame
         if inputType > 0:
@@ -197,7 +197,7 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
                         if bboxId not in local_id_mapping and bboxId not in to_be_reid:
                             
                             if len(reid_map[id].q) > 0 : #add to reid queue
-                                to_be_reid[bboxId] = crop_object
+                                to_be_reid[bboxId] = (crop_object,dir)
                                 #local_id_mapping[bbox.id] = localMappingPerson(-1,STATUS_PENDING, ) 
             
                             elif len(reid_map[id].q)== 0: #new person
@@ -210,6 +210,8 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
                             if(local_id_mapping[bboxId].entry != dir) and get_dest is not None:
                                 if g_id not in reid_map[int(get_dest)].q:
                                     with reid_map[int(get_dest)].lock:
+                                        print("Predicted direction of motion: ", directions[dir])
+                                        print("Predicted Camera to reappear: ",get_dest)
                                         reid_map[int(get_dest)].q[g_id] = ReIDPerson(g_id, id)
                                         update_person_image(g_id, crop_object)
 
@@ -235,7 +237,7 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
                 reid_target_images = []
                 reid_init_images = []
                 for key in to_be_reid:
-                    reid_target_images.append((key,to_be_reid[key]))
+                    reid_target_images.append((key,to_be_reid[key][0], to_be_reid[key][1])) #to be reid[key] has photo
 
                 for key in reid_map[id].q: ##here camera source is not considered for now 
                     shared_person_key = reid_map[id].q[key].g_id
@@ -250,7 +252,8 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
                 for i in range(len(pairing)):
                     update_person_location(reid_init_images[i][0], id )   
                     update_person_image(reid_init_images[i][0], reid_target_images[pairing[i]][1]) #update image to re ided one
-                    local_id_mapping[reid_target_images[pairing[i]][0]] = localMappingPerson(reid_init_images[i][0], STATUS_IDD, 0)
+                    
+                    local_id_mapping[reid_target_images[pairing[i]][0]] = localMappingPerson(reid_init_images[i][0], STATUS_IDD, reid_target_images[pairing[i]][2])
                     
                          
 
@@ -297,7 +300,7 @@ if __name__ == "__main__":
 
     #Get graph
     graph_file_path = "mapper/network_map.txt"
-    graph = create_graph_from_topology(graph_file_path)
+    graph = create_graph_from_file(graph_file_path)
   
     n_camera = 2
     # Communicate using the Queue
