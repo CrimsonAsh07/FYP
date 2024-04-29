@@ -208,7 +208,7 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
                         boxes = bbox.xyxy.tolist()[0]
                         crop_object = frame[int(boxes[1]):int(boxes[3]), int(boxes[0]):int(boxes[2])]
                         if bboxId not in local_id_mapping and bboxId not in to_be_reid:
-                            print(id,f"Person {bboxId} has been located at camera {id} at center")
+                            print(id,f"CAMERA {id} :: Person {bboxId} has been located at the center.")
                             pid = add_person(Person(bboxId,id, crop_object))
                             event_logger.write_log(log_file_path, f"Person {bboxId} has been located at camera {id}")
                             sqlite.record_entry(id,bboxId, conn)
@@ -233,27 +233,26 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
                         if bboxId not in local_id_mapping and bboxId not in to_be_reid:
                             
                             if len(reid_map[id].q) > 0 : #add to reid queue
-                                print(f"camere {id}:: To Be REID {bboxId} coming from ",directions[dir])
+                                print(f"CAMERA {id} :: (To Be ReIdentified) Person L{bboxId} coming from",directions[dir])
                                 to_be_reid[bboxId] = (crop_object,dir)
                                 
                                 #local_id_mapping[bbox.id] = localMappingPerson(-1,STATUS_PENDING, ) 
             
                             elif len(reid_map[id].q)== 0: #new person
-                                print(id,f"Person {bboxId} has been located at camera {id}",directions[dir])
+                                print(f"CAMERA {id} :: Person {bboxId} detected at the", directions[dir], "section of the room.")
                                 pid = add_person(Person(bboxId,id, crop_object))
                                 event_logger.write_log(log_file_path, f"Person {bboxId} has been located at camera {id}")
                                 sqlite.record_entry(id,bboxId, conn)
                                 local_id_mapping[bboxId] = localMappingPerson(pid, STATUS_IDD, dir)
                         else:
-                            
                             get_dest = query_graph(chr(id + ord('0')), directions[dir], graph)
                             g_id = local_id_mapping[bboxId].g_id
                             if(local_id_mapping[bboxId].entry != dir) and get_dest is not None:
                                 
                                 if g_id not in reid_map[int(get_dest)].q:
                                     with reid_map[int(get_dest)].lock:
-                                        print(f"CAMERA {id}:: Predicted direction of motion: ", directions[dir],end = " ")
-                                        print(f"Predicted Camera to reappear: ",get_dest)
+                                        print(f"CAMERA {id} :: Predicted direction of motion:", directions[dir],end = " ")
+                                        print(f"|| Predicted Camera to reappear: ",get_dest)
                                         reid_map[int(get_dest)].q[g_id] = ReIDPerson(g_id, id)
                                         update_person_image(g_id, crop_object)
 
@@ -296,6 +295,7 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
                 pairing = get_pairing(reidModel, reid_init_images, reid_target_images)
 
                 for i in range(len(pairing)):
+                    print(f"CAMERA {id} :: Person with L{reid_target_images[i][0]} has been reidentified as G{reid_init_images[i][0]}  ")
                     event_logger.write_log(log_file_path, f"Person {reid_init_images[i][0]} has exited camera {shared_person[reid_init_images[i][0]].camera_id} and entered camera {id}")
                     sqlite.record_entry(id,reid_init_images[i][0], conn)
                     update_person_location(reid_init_images[i][0], id )   
@@ -362,8 +362,8 @@ if __name__ == "__main__":
 
 
     # Define the video files for the trackers
-    #args= [ (INPUT_FILE,"./test_data/cam_left.mp4"),(INPUT_FILE,"./test_data/cam_right.mp4")]
-    args= [ (INPUT_WEBCAM,0),(INPUT_MOB,"http://192.168.50.151:8080/shot.jpg")]
+    args= [ (INPUT_FILE,"./test_data/cam_left.mp4"),(INPUT_FILE,"./test_data/cam_right.mp4")]
+    #args= [ (INPUT_WEBCAM,0),(INPUT_MOB,"http://192.168.50.151:8080/shot.jpg")]
     
     # Create the tracker threads
     threads = []
