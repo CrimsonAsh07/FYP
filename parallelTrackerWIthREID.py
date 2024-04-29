@@ -96,19 +96,20 @@ def update_person_image(person_id, image):
 
 
 def predict_direction(id,bbox, screen_dim):
-    out_percent = 23/100
+    out_percent = 25/100
     if len(bbox) < 1:
         return 0
 
-    #print("Len",id,bbox,screen_dim)
-    if bbox[0] == 0 and bbox[2] < out_percent*screen_dim[1]:
+    
+    if bbox[0] < out_percent*0.05*screen_dim[1] and bbox[2] < out_percent*screen_dim[1]:
         return 1   
-    if bbox[1] == 0 and bbox[3] < out_percent*screen_dim[0]:
+    if bbox[1] < out_percent*0.05*screen_dim[0] and bbox[3] < out_percent*screen_dim[0]:
         return 4  
     if  (screen_dim[1]-bbox[2]) < out_percent*0.05*screen_dim[1] and bbox[0] > (1-out_percent)*screen_dim[1]:
         return 3 
     if (screen_dim[0]-bbox[3]) < out_percent*0.05*screen_dim[0] and bbox[1] > (1-out_percent)*screen_dim[0]:
         return 2
+    #print(bbox[0], bbox[1], bbox[2], bbox[3],end = " :: ")
     
     return 0
 
@@ -125,19 +126,26 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
     if record_output and not os.path.exists(output_folder):
         os.makedirs(output_folder)
     
-    # Initialize webcam
+    # Initialize webcam and file cam
     if inputType > 0:    
         cap = cv2.VideoCapture(inputPath)
+        
+
         if not cap.isOpened():
             print("Error: Unable to open input stream.")
             return
-
+        if inputType == INPUT_WEBCAM:
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 7680)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 4320)
     start_time = time.time()
     count = 0
 
     local_id_mapping = {}
     restricted_detections = {}
+    
 
+# Print the current resolution
+    
     conn = sqlite.sqlite3.connect('surveillance_db.db') # connect to sqlite
     print("\n\n\n")
     while True:
@@ -169,7 +177,7 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
 
             enhanced_frame= lowlight_test_frame.lowlight(frame, threshold=50,verbose=False) #low light threshold
 
-            results = model.track(enhanced_frame, persist=True, verbose=False, classes=[0])
+            results = model.track(enhanced_frame, persist=True, verbose=False, classes=[0], conf=0.3)
 
             # Visualize the results on the frame
             
@@ -179,48 +187,73 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
             bboxs = results[0].boxes
             to_be_reid = {}
             newIds=[]
+            local_id_mapping_copy = local_id_mapping.copy()
+
             for bbox in bboxs:
-                
+
                 dir = predict_direction(bbox.id,bbox.xyxy.cpu().numpy()[0], bbox.orig_shape)
                 if bbox.id is not None:
+                    
                     bboxId = bbox.id.item()
+                    if bboxId in local_id_mapping_copy:
+                        local_id_mapping_copy.pop(bboxId)
                     if bbox.conf.item() > 0.7 and bboxId not in restricted_detections:
                         if node_isRestricted(graph,chr(id + ord('0'))) == "Unrestricted Area":
                             pass
                         else:
                             restricted_detections[bboxId]='1'
 
+                if dir == 0 and bbox.id is not None:
+                    if bbox.conf.item() > 0.7:
+                        boxes = bbox.xyxy.tolist()[0]
+                        crop_object = frame[int(boxes[1]):int(boxes[3]), int(boxes[0]):int(boxes[2])]
+                        if bboxId not in local_id_mapping and bboxId not in to_be_reid:
+                            print(id,f"Person {bboxId} has been located at camera {id} at center")
+                            pid = add_person(Person(bboxId,id, crop_object))
+                            event_logger.write_log(log_file_path, f"Person {bboxId} has been located at camera {id}")
+                            sqlite.record_entry(id,bboxId, conn)
+                            local_id_mapping[bboxId] = localMappingPerson(pid, STATUS_IDD, dir)
+
+                        if bboxId  in local_id_mapping:
+                            local_id_mapping[bboxId].entry = dir
 
                 if dir != 0 and bbox.id is not None: 
+                    
                     bboxId = bbox.id.item()
                     #if someone new detected, find out if he needs to be reid
                         
                     #if re id then reid, add to local map, and update global map
                     #if truly new then add to local map and add to global map
 
-                    if bbox.conf.item() > 0.7:
+                    if bbox.conf.item() > 0.5:
+                        #if id == 0: print(id,directions[dir], end=" ")
                         boxes = bbox.xyxy.tolist()[0]
                         crop_object = frame[int(boxes[1]):int(boxes[3]), int(boxes[0]):int(boxes[2])]
                         
                         if bboxId not in local_id_mapping and bboxId not in to_be_reid:
                             
                             if len(reid_map[id].q) > 0 : #add to reid queue
+                                print(f"camere {id}:: To Be REID {bboxId} coming from ",directions[dir])
                                 to_be_reid[bboxId] = (crop_object,dir)
+                                
                                 #local_id_mapping[bbox.id] = localMappingPerson(-1,STATUS_PENDING, ) 
             
                             elif len(reid_map[id].q)== 0: #new person
+                                print(id,f"Person {bboxId} has been located at camera {id}",directions[dir])
                                 pid = add_person(Person(bboxId,id, crop_object))
                                 event_logger.write_log(log_file_path, f"Person {bboxId} has been located at camera {id}")
                                 sqlite.record_entry(id,bboxId, conn)
                                 local_id_mapping[bboxId] = localMappingPerson(pid, STATUS_IDD, dir)
                         else:
+                            
                             get_dest = query_graph(chr(id + ord('0')), directions[dir], graph)
                             g_id = local_id_mapping[bboxId].g_id
                             if(local_id_mapping[bboxId].entry != dir) and get_dest is not None:
+                                
                                 if g_id not in reid_map[int(get_dest)].q:
                                     with reid_map[int(get_dest)].lock:
-                                        print("Predicted direction of motion: ", directions[dir])
-                                        print("Predicted Camera to reappear: ",get_dest)
+                                        print(f"CAMERA {id}:: Predicted direction of motion: ", directions[dir],end = " ")
+                                        print(f"Predicted Camera to reappear: ",get_dest)
                                         reid_map[int(get_dest)].q[g_id] = ReIDPerson(g_id, id)
                                         update_person_image(g_id, crop_object)
 
@@ -232,6 +265,10 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
                         newIds.append(local_id_mapping[idItem].g_id)
                     else:
                         newIds.append(idItem)
+
+                #Remove people who left
+                for ids in local_id_mapping_copy:
+                    local_id_mapping.pop(ids)        
                     
                     
 
@@ -290,13 +327,13 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
             break
     if inputType > 0:  
         cap.release()
-
+    conn.close()
 
 if __name__ == "__main__":
     args = argparse.ArgumentParser(description='PyTorch Template')
     args.add_argument('-c', '--config', default=None, type=str,
                       help='config file path (default: None)')
-    args.add_argument('-r', '--resume', default=None, type=str,
+    args.add_argument('-r', '--resume', default="RE_ID_VAE\saved\models\VAE_REID\important-models\checkpoint-epoch50.pth", type=str,
                       help='path to latest checkpoint (default: None)')
     args.add_argument('-d', '--device', default=None, type=str,
                       help='indices of GPUs to enable (default: all)')
@@ -316,7 +353,7 @@ if __name__ == "__main__":
     n_camera = graph.number_of_nodes()
     # Communicate using the Queue
     reid_map = [ LockArray() for i in range(n_camera)]
-    
+    #n_camera = 1
     shared_person = {}  # Shared dictionary for person locations
     shared_person_lock = Lock()
 
@@ -325,13 +362,13 @@ if __name__ == "__main__":
 
 
     # Define the video files for the trackers
-    paths = [ "./test_data/cam_left.mp4","./test_data/cam_right.mp4"]
-
+    #args= [ (INPUT_FILE,"./test_data/cam_left.mp4"),(INPUT_FILE,"./test_data/cam_right.mp4")]
+    args= [ (INPUT_WEBCAM,0),(INPUT_MOB,"http://192.168.50.151:8080/shot.jpg")]
     
     # Create the tracker threads
     threads = []
     for i in range(n_camera):
-        threads.append(threading.Thread(target=analyze_footage, args=(INPUT_FILE,paths[i],record_output,output_folder, duration,i, reidModel), daemon=True))
+        threads.append(threading.Thread(target=analyze_footage, args=(args[i][0],args[i][1],record_output,output_folder, duration,i, reidModel), daemon=True))
 
     # Start the tracker threads
         
