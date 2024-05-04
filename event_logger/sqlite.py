@@ -30,7 +30,9 @@ def record_entry(camera_id, person_id, conn):
 
 # Example usage (replace with your camera feed processing logic)
 if __name__ == "__main__":
-    entries = c.execute("SELECT * from entries where camera_id = 1")
+    Query = "SELECT * from entries where camera_id = 0"
+    entries = c.execute(Query)
+    print("Query",Query)
     if entries:
         print("Entry Records:")
         for row in entries:

@@ -9,3 +9,9 @@ mapper/geographic_map.txt
 mapper/network_map.txt
 logs
 surveillance_db.db
+*.db
+*.jpg
+test_data/enhance.png
+*.mp4
+*.mp4
+test_data/walks.mp4
