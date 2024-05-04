@@ -53,6 +53,7 @@ class localMappingPerson: #object of local_id_mapping
         self.status = status
         self.g_id = g_id
         self.entry = entry
+        self.frames = 0
 
 class ReIDPerson: #reid_map queue object
     def __init__(self, g_id, camera_source):
@@ -96,7 +97,7 @@ def update_person_image(person_id, image):
 
 
 def predict_direction(id,bbox, screen_dim):
-    out_percent = 25/100
+    out_percent = 27/100
     if len(bbox) < 1:
         return 0
 
@@ -197,6 +198,8 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
                     bboxId = bbox.id.item()
                     if bboxId in local_id_mapping_copy:
                         local_id_mapping_copy.pop(bboxId)
+                        
+
                     if bbox.conf.item() > 0.7 and bboxId not in restricted_detections:
                         if node_isRestricted(graph,chr(id + ord('0'))) == "Unrestricted Area":
                             pass
@@ -210,6 +213,7 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
                         if bboxId not in local_id_mapping and bboxId not in to_be_reid:
                             print(id,f"CAMERA {id} :: Person {bboxId} has been located at the center.")
                             pid = add_person(Person(bboxId,id, crop_object))
+                            cv2.imwrite(log_folder_path+f'/{bboxId}.jpg', crop_object)
                             event_logger.write_log(log_file_path, f"Person {bboxId} has been located at camera {id}")
                             sqlite.record_entry(id,bboxId, conn)
                             local_id_mapping[bboxId] = localMappingPerson(pid, STATUS_IDD, dir)
@@ -232,7 +236,7 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
                         
                         if bboxId not in local_id_mapping and bboxId not in to_be_reid:
                             
-                            if len(reid_map[id].q) > 0 : #add to reid queue
+                            if len(reid_map[id].q) > 0 and bboxId not in to_be_reid: #add to reid queue
                                 print(f"CAMERA {id} :: (To Be ReIdentified) Person L{bboxId} coming from",directions[dir])
                                 to_be_reid[bboxId] = (crop_object,dir)
                                 
@@ -241,6 +245,7 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
                             elif len(reid_map[id].q)== 0: #new person
                                 print(f"CAMERA {id} :: Person {bboxId} detected at the", directions[dir], "section of the room.")
                                 pid = add_person(Person(bboxId,id, crop_object))
+                                cv2.imwrite(log_folder_path+f'/{bboxId}.jpg', crop_object)
                                 event_logger.write_log(log_file_path, f"Person {bboxId} has been located at camera {id}")
                                 sqlite.record_entry(id,bboxId, conn)
                                 local_id_mapping[bboxId] = localMappingPerson(pid, STATUS_IDD, dir)
@@ -255,6 +260,8 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
                                         print(f"|| Predicted Camera to reappear: ",get_dest)
                                         reid_map[int(get_dest)].q[g_id] = ReIDPerson(g_id, id)
                                         update_person_image(g_id, crop_object)
+                                        cv2.imwrite(log_folder_path+f'/{g_id}.jpg', crop_object)
+
 
                 #mapping ids to global
                                 
@@ -265,16 +272,19 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
                     else:
                         newIds.append(idItem)
 
-                #Remove people who left
-                for ids in local_id_mapping_copy:
-                    local_id_mapping.pop(ids)        
-                    
+            #Remove people who left
+            for ids in local_id_mapping_copy:
+                if ids in local_id_mapping:
+                    if local_id_mapping[ids].frames > 30:
+                        local_id_mapping.pop(ids)        
+                    else: 
+                        local_id_mapping[ids].frames+=1
                     
 
             
             new_results = results[0].new()
             annotated_frame= cplot(new_results, newIds, results[0].boxes)
-            
+            annotated_frame = cv2.resize(annotated_frame, (640, 480)) 
             cv2.imshow("YOLOv8 Tracking"+str(id), annotated_frame)
 
            
@@ -362,9 +372,9 @@ if __name__ == "__main__":
 
 
     # Define the video files for the trackers
-    args= [ (INPUT_FILE,"./test_data/cam_left.mp4"),(INPUT_FILE,"./test_data/cam_right.mp4")]
-    #args= [ (INPUT_WEBCAM,0),(INPUT_MOB,"http://192.168.50.151:8080/shot.jpg")]
-    
+    #args= [ (INPUT_FILE,"./test_data/cam_left.mp4"),(INPUT_FILE,"./test_data/cam_right.mp4")]
+    #args= [ (INPUT_WEBCAM,0),(INPUT_MOB,"http://192.168.50.151:8085/shot.jpg"),(INPUT_MOB,"http://192.168.50.67:8080/shot.jpg")]
+    args= [ (INPUT_WEBCAM,0),(INPUT_MOB,"http://192.168.50.151:8085/shot.jpg")]
     # Create the tracker threads
     threads = []
     for i in range(n_camera):
