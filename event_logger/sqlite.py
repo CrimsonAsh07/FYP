@@ -30,9 +30,12 @@ def record_entry(camera_id, person_id, conn):
 
 # Example usage (replace with your camera feed processing logic)
 if __name__ == "__main__":
-    Query = "SELECT * from entries where camera_id = 0"
-    entries = c.execute(Query)
-    print("Query",Query)
+    threshold_time = datetime.datetime(year=2024, month=5, day=7, hour=8, minute=35, second=28)
+
+    Query = "SELECT * from entries where camera_id = 1 AND entry_timestamp > ?"
+    entries = c.execute(Query,(threshold_time,))
+    Query = "SELECT * from entries where camera_id = 1 AND entry_timestamp > "
+    print("Query",Query + str(threshold_time))
     if entries:
         print("Entry Records:")
         for row in entries:

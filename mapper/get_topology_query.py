@@ -76,7 +76,8 @@ def node_isRestricted(graph, node):
         if loc:
             msg += f"  *[Room {loc}]*"
         
-        send_whatsapp_message("+917338870517", msg)
+        #send_whatsapp_message("+917338870517", msg)
+        print(msg)
 
     else:
         return "Unrestricted Area"

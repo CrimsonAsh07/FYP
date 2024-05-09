@@ -86,7 +86,7 @@ def get_pairing(model, init_images, target_images):
             
             similarity ,distance = L2M(tensor1[0], tensor1[1], tensor1[2],tensor2[0], tensor2[1], tensor2[2], 25, device)
             operation_matrix[i, j] = distance.item()
-    pairing = linear_sum_assignment(operation_matrix)
+
     row_pair,col_pair = linear_sum_assignment(operation_matrix)              
 
     return col_pair
