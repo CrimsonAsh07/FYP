@@ -102,13 +102,13 @@ def predict_direction(id,bbox, screen_dim):
         return 0
 
     
-    if bbox[0] < out_percent*0.05*screen_dim[1] and bbox[2] < out_percent*screen_dim[1]:
+    if bbox[0] < out_percent*0.5*screen_dim[1] and bbox[2] < out_percent*screen_dim[1]:
         return 1   
-    if bbox[1] < out_percent*0.05*screen_dim[0] and bbox[3] < out_percent*screen_dim[0]:
+    if bbox[1] < out_percent*0.5*screen_dim[0] and bbox[3] < out_percent*screen_dim[0]:
         return 4  
-    if  (screen_dim[1]-bbox[2]) < out_percent*0.05*screen_dim[1] and bbox[0] > (1-out_percent)*screen_dim[1]:
+    if  (screen_dim[1]-bbox[2]) < out_percent*0.5*screen_dim[1] and bbox[0] > (1-out_percent)*screen_dim[1]:
         return 3 
-    if (screen_dim[0]-bbox[3]) < out_percent*0.05*screen_dim[0] and bbox[1] > (1-out_percent)*screen_dim[0]:
+    if (screen_dim[0]-bbox[3]) < out_percent*0.5*screen_dim[0] and bbox[1] > (1-out_percent)*screen_dim[0]:
         return 2
     #print(bbox[0], bbox[1], bbox[2], bbox[3],end = " :: ")
     
@@ -302,7 +302,11 @@ def analyze_footage(inputType, inputPath,record_output,output_folder, duration, 
                 
                 to_be_reid.clear()
                 reid_map[id].q.clear()
+
+                #Pairing function gets pairing
                 pairing = get_pairing(reidModel, reid_init_images, reid_target_images)
+
+
 
                 for i in range(len(pairing)):
                     print(f"CAMERA {id} :: Person with L{reid_target_images[i][0]} has been reidentified as G{reid_init_images[i][0]}  ")
@@ -372,9 +376,9 @@ if __name__ == "__main__":
 
 
     # Define the video files for the trackers
-    #args= [ (INPUT_FILE,"./test_data/cam_left.mp4"),(INPUT_FILE,"./test_data/cam_right.mp4")]
+    args= [ (INPUT_FILE,"./test_data/1.mp4"),(INPUT_FILE,"./test_data/2.mp4"),(INPUT_FILE,"./test_data/3.mp4")]
     #args= [ (INPUT_WEBCAM,0),(INPUT_MOB,"http://192.168.50.151:8085/shot.jpg"),(INPUT_MOB,"http://192.168.50.67:8080/shot.jpg")]
-    args= [ (INPUT_WEBCAM,0),(INPUT_MOB,"http://192.168.50.151:8085/shot.jpg")]
+    #args= [ (INPUT_WEBCAM,0),(INPUT_MOB,"http://192.168.50.151:8085/shot.jpg")]
     # Create the tracker threads
     threads = []
     for i in range(n_camera):
